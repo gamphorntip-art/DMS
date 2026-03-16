@@ -1,0 +1,1603 @@
+<!doctype html>
+<html lang="th" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบจัดการเอกสาร</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script src="/_sdk/data_sdk.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Sarabun', sans-serif; }
+    .tab-active { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; }
+    .card-shadow { box-shadow: 0 4px 20px rgba(99, 102, 241, 0.15); }
+    .btn-gradient { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); }
+    .btn-gradient:hover { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); }
+    .status-active { background: linear-gradient(135deg, #10b981 0%, #34d399 100%); }
+    .status-cancelled { background: linear-gradient(135deg, #ef4444 0%, #f87171 100%); }
+    .status-draft { background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%); }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-fade { animation: fadeIn 0.3s ease-out; }
+    .scrollbar-thin::-webkit-scrollbar { width: 6px; }
+    .scrollbar-thin::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 10px; }
+    .scrollbar-thin::-webkit-scrollbar-thumb { background: #c7d2fe; border-radius: 10px; }
+    .upload-zone { border: 2px dashed #a5b4fc; }
+    .progress-bar { width: 0%; transition: width 0.3s ease; }
+  </style>
+  <style>body { box-sizing: border-box; }</style>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js" type="text/javascript"></script>
+ </head>
+ <body class="h-full bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
+  <div id="app" class="h-full w-full overflow-auto scrollbar-thin">
+   <!-- Header -->
+   <header class="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-indigo-100">
+    <div class="max-w-7xl mx-auto px-4 py-4">
+     <div class="flex items-center justify-between">
+      <div class="flex items-center gap-3">
+       <div class="w-12 h-12 rounded-2xl btn-gradient flex items-center justify-center shadow-lg">
+        <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+       </div>
+       <div>
+        <h1 id="systemTitle" class="text-xl font-bold text-gray-800">ระบบจัดการเอกสาร</h1>
+        <p id="companyName" class="text-sm text-indigo-500 font-medium">บริษัท ABC จำกัด</p>
+       </div>
+      </div>
+      <div class="flex items-center gap-2">
+       <span id="docCount" class="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-full text-sm font-semibold">0 เอกสาร</span>
+      </div>
+     </div>
+    </div>
+   </header><!-- Navigation Tabs -->
+   <nav class="max-w-7xl mx-auto px-4 py-4">
+    <div class="flex flex-wrap gap-2 bg-white/60 backdrop-blur-sm p-2 rounded-2xl shadow-sm">
+     <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-btn px-5 py-3 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 text-gray-600 hover:bg-indigo-100"> <span>📊</span> แดชบอร์ด </button> <button onclick="switchTab('dar-request')" id="tab-dar-request" class="tab-btn px-5 py-3 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 tab-active"> <span>📋</span> ขอดำเนินการเอกสาร </button> <button onclick="switchTab('edit-request')" id="tab-edit-request" class="tab-btn px-5 py-3 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 text-gray-600 hover:bg-indigo-100"> <span>✏️</span> ขอแก้ไขเอกสาร </button> <button onclick="switchTab('cancel-request')" id="tab-cancel-request" class="tab-btn px-5 py-3 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 text-gray-600 hover:bg-indigo-100"> <span>❌</span> ขอยกเลิกเอกสาร </button> <button onclick="switchTab('dar-log')" id="tab-dar-log" class="tab-btn px-5 py-3 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 text-gray-600 hover:bg-indigo-100"> <span>📚</span> DAR LOG </button> <button onclick="switchTab('masterlist')" id="tab-masterlist" class="tab-btn px-5 py-3 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 text-gray-600 hover:bg-indigo-100"> <span>📑</span> เอกสารทั้งหมด </button>
+    </div>
+   </nav><!-- Main Content -->
+   <main class="max-w-7xl mx-auto px-4 pb-8">
+    <!-- Dashboard Tab -->
+    <section id="panel-dashboard" class="tab-panel hidden">
+     <div class="animate-fade space-y-6"><!-- KPI Cards Row -->
+      <div class="grid md:grid-cols-4 gap-4">
+       <div class="bg-gradient-to-br from-indigo-400 to-indigo-600 rounded-2xl p-6 text-white shadow-lg hover:shadow-xl transition-all">
+        <div class="flex items-center justify-between mb-3">
+         <div class="text-4xl">
+          📋
+         </div><span class="text-sm bg-white/20 px-3 py-1 rounded-full">รวมทั้งหมด</span>
+        </div>
+        <p class="text-sm text-indigo-100 mb-2">เอกสารทั้งหมด</p>
+        <p id="dashTotalDocs" class="text-4xl font-bold">0</p>
+       </div>
+       <div class="bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-2xl p-6 text-white shadow-lg hover:shadow-xl transition-all">
+        <div class="flex items-center justify-between mb-3">
+         <div class="text-4xl">
+          ✅
+         </div><span class="text-sm bg-white/20 px-3 py-1 rounded-full">ใช้งาน</span>
+        </div>
+        <p class="text-sm text-emerald-100 mb-2">เอกสารที่ใช้งาน</p>
+        <p id="dashActiveDocs" class="text-4xl font-bold">0</p>
+       </div>
+       <div class="bg-gradient-to-br from-rose-400 to-rose-600 rounded-2xl p-6 text-white shadow-lg hover:shadow-xl transition-all">
+        <div class="flex items-center justify-between mb-3">
+         <div class="text-4xl">
+          ❌
+         </div><span class="text-sm bg-white/20 px-3 py-1 rounded-full">ยกเลิก</span>
+        </div>
+        <p class="text-sm text-rose-100 mb-2">เอกสารยกเลิก</p>
+        <p id="dashCancelledDocs" class="text-4xl font-bold">0</p>
+       </div>
+       <div class="bg-gradient-to-br from-amber-400 to-amber-600 rounded-2xl p-6 text-white shadow-lg hover:shadow-xl transition-all">
+        <div class="flex items-center justify-between mb-3">
+         <div class="text-4xl">
+          📝
+         </div><span class="text-sm bg-white/20 px-3 py-1 rounded-full">ทั้งหมด</span>
+        </div>
+        <p class="text-sm text-amber-100 mb-2">บันทึก DAR ทั้งหมด</p>
+        <p id="dashTotalRecords" class="text-4xl font-bold">0</p>
+       </div>
+      </div><!-- Activity Chart Row -->
+      <div class="grid md:grid-cols-2 gap-6"><!-- Document Type Distribution -->
+       <div class="bg-white rounded-2xl shadow-lg p-6 card-shadow">
+        <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2"><span>📊</span> การแจกแจงประเภทเอกสาร</h3>
+        <div id="dashTypeDistribution" class="space-y-3"><!-- Dynamic content -->
+        </div>
+       </div><!-- Recent Actions -->
+       <div class="bg-white rounded-2xl shadow-lg p-6 card-shadow">
+        <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2"><span>⏱️</span> การดำเนินการล่าสุด (5 รายการ)</h3>
+        <div id="dashRecentActions" class="space-y-2"><!-- Dynamic content -->
+        </div>
+        <div id="dashEmptyActions" class="text-center text-gray-400 py-4">
+         <p>ยังไม่มีการดำเนินการ</p>
+        </div>
+       </div>
+      </div><!-- Action Breakdown -->
+      <div class="bg-white rounded-2xl shadow-lg p-6 card-shadow">
+       <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2"><span>📈</span> สรุปการดำเนินการ</h3>
+       <div class="grid md:grid-cols-3 gap-4">
+        <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 border-l-4 border-blue-500">
+         <div class="flex items-center justify-between mb-2"><span class="text-sm font-semibold text-gray-600">🆕 จัดทำใหม่</span> <span id="dashCreateCount" class="text-2xl font-bold text-blue-600">0</span>
+         </div>
+         <p class="text-xs text-gray-500">บันทึกการจัดทำเอกสารใหม่</p>
+        </div>
+        <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 border-l-4 border-green-500">
+         <div class="flex items-center justify-between mb-2"><span class="text-sm font-semibold text-gray-600">✏️ แก้ไข</span> <span id="dashEditCount" class="text-2xl font-bold text-green-600">0</span>
+         </div>
+         <p class="text-xs text-gray-500">บันทึกการแก้ไขเอกสาร</p>
+        </div>
+        <div class="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-4 border-l-4 border-red-500">
+         <div class="flex items-center justify-between mb-2"><span class="text-sm font-semibold text-gray-600">❌ ยกเลิก</span> <span id="dashCancelCount" class="text-2xl font-bold text-red-600">0</span>
+         </div>
+         <p class="text-xs text-gray-500">บันทึกการยกเลิกเอกสาร</p>
+        </div>
+       </div>
+      </div>
+     </div>
+    </section><!-- DAR Request Tab -->
+    <section id="panel-dar-request" class="tab-panel animate-fade">
+     <div class="bg-white rounded-3xl card-shadow p-6 mb-6">
+      <h2 class="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2"><span class="w-8 h-8 rounded-xl bg-indigo-100 flex items-center justify-center">📋</span> ขอดำเนินการเอกสาร (DAR)</h2>
+      <form id="darForm" class="space-y-6">
+       <!-- Document Information Section -->
+       <div class="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-4">
+        <h3 class="font-bold text-gray-700 mb-4 flex items-center gap-2"><span>📄</span> ข้อมูลเอกสาร</h3>
+        <div class="grid md:grid-cols-2 gap-4">
+         <div>
+          <label class="block text-sm font-semibold text-gray-600 mb-2">ประเภทเอกสาร :</label> <select id="docType" class="w-full px-4 py-3 rounded-xl border-2 border-blue-200 focus:border-blue-400 focus:outline-none transition-colors"> <option value="">-- เลือกประเภท --</option> <option value="procedure">Procedure (ขั้นตอนการปฏิบัติงาน)</option> <option value="work_instruction">Work Instruction (วิธีการทำงาน)</option> <option value="form">Form (แบบฟอร์ม)</option> <option value="record">Record (บันทึก)</option> <option value="manual">Manual (คู่มือ)</option> <option value="policy">Policy (นโยบาย)</option> </select>
+         </div>
+         <div>
+          <label class="block text-sm font-semibold text-gray-600 mb-2">ชื่อเอกสาร :</label> <input type="text" id="darDocName" placeholder="ชื่อเอกสาร" class="w-full px-4 py-3 rounded-xl border-2 border-blue-200 focus:border-blue-400 focus:outline-none transition-colors">
+         </div>
+         <div>
+          <label class="block text-sm font-semibold text-gray-600 mb-2">รหัสเอกสาร :</label> <input type="text" id="darDocCode" placeholder="เช่น DOC-001" class="w-full px-4 py-3 rounded-xl border-2 border-blue-200 focus:border-blue-400 focus:outline-none transition-colors">
+         </div>
+         <div>
+          <label class="block text-sm font-semibold text-gray-600 mb-2">หน่วยงานที่ขอดำเนินการ :</label> <input type="text" id="darDepartment" placeholder="เช่น แผนกคุณภาพ" class="w-full px-4 py-3 rounded-xl border-2 border-blue-200 focus:border-blue-400 focus:outline-none transition-colors">
+         </div>
+        </div>
+       </div><!-- DAR Details Section -->
+       <div class="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-4">
+        <h3 class="font-bold text-gray-700 mb-4 flex items-center gap-2"><span>📝</span> รายละเอียด DAR</h3>
+        <div class="grid md:grid-cols-3 gap-4">
+         <div>
+          <label class="block text-sm font-semibold text-gray-600 mb-2">แก้ไขครั้งที่ :</label> <select id="darEditVersion" class="w-full px-4 py-3 rounded-xl border-2 border-green-200 focus:border-green-400 focus:outline-none transition-colors"> <option value="01">01</option> <option value="02">02</option> <option value="03">03</option> <option value="04">04</option> <option value="05">05</option> <option value="06">06</option> <option value="07">07</option> <option value="08">08</option> <option value="09">09</option> <option value="10">10</option> </select>
+         </div>
+         <div>
+          <label class="block text-sm font-semibold text-gray-600 mb-2">วันที่ :</label> <input type="date" id="darDate" class="w-full px-4 py-3 rounded-xl border-2 border-green-200 focus:border-green-400 focus:outline-none transition-colors">
+         </div>
+         <div>
+          <label class="block text-sm font-semibold text-gray-600 mb-2">DAR No. :</label> <input type="text" id="darNo" placeholder="สร้างอัตโนมัติ" class="w-full px-4 py-3 rounded-xl border-2 border-green-200 focus:border-green-400 focus:outline-none transition-colors bg-gray-50" readonly>
+         </div>
+        </div>
+       </div><!-- Action Details -->
+       <div class="bg-gradient-to-r from-orange-50 to-amber-50 rounded-2xl p-4">
+        <h3 class="font-bold text-gray-700 mb-4">รายละเอียดที่ขอดำเนินการ</h3>
+        <div>
+         <label class="block text-sm font-semibold text-gray-600 mb-2">รายละเอียด :</label> <textarea id="darActionDetails" rows="3" placeholder="ระบุรายละเอียดของคำขอดำเนินการ..." class="w-full px-4 py-3 rounded-xl border-2 border-orange-200 focus:border-orange-400 focus:outline-none transition-colors resize-none"></textarea>
+        </div>
+       </div><!-- Requester Section -->
+       <div class="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-2xl p-4">
+        <h3 class="font-bold text-gray-700 mb-4 flex items-center gap-2"><span>👤</span> ผู้ขอดำเนินการ</h3>
+        <div class="grid md:grid-cols-2 gap-4">
+         <div>
+          <label class="block text-sm font-semibold text-gray-600 mb-2">ชื่อ :</label> <input type="text" id="requesterName" placeholder="ชื่อผู้ขอ" class="w-full px-4 py-3 rounded-xl border-2 border-yellow-200 focus:border-yellow-400 focus:outline-none transition-colors">
+         </div>
+         <div>
+          <label class="block text-sm font-semibold text-gray-600 mb-2">ตำแหน่ง :</label> <input type="text" id="requesterPosition" placeholder="ตำแหน่ง" class="w-full px-4 py-3 rounded-xl border-2 border-yellow-200 focus:border-yellow-400 focus:outline-none transition-colors">
+         </div>
+        </div>
+       </div><!-- Approver Section -->
+       <div class="bg-gradient-to-r from-pink-50 to-rose-50 rounded-2xl p-4">
+        <h3 class="font-bold text-gray-700 mb-4 flex items-center gap-2"><span>✅</span> ผู้อนุมัติ</h3>
+        <div class="grid md:grid-cols-2 gap-4">
+         <div>
+          <label class="block text-sm font-semibold text-gray-600 mb-2">ชื่อ :</label> <input type="text" id="approverName" placeholder="ชื่อผู้อนุมัติ" class="w-full px-4 py-3 rounded-xl border-2 border-pink-200 focus:border-pink-400 focus:outline-none transition-colors">
+         </div>
+         <div>
+          <label class="block text-sm font-semibold text-gray-600 mb-2">ตำแหน่ง :</label> <input type="text" id="approverPosition" placeholder="ตำแหน่ง" class="w-full px-4 py-3 rounded-xl border-2 border-pink-200 focus:border-pink-400 focus:outline-none transition-colors">
+         </div>
+        </div>
+       </div><!-- Other Personnel Section -->
+       <div class="bg-gradient-to-r from-violet-50 to-purple-50 rounded-2xl p-4">
+        <h3 class="font-bold text-gray-700 mb-4 flex items-center gap-2"><span>👥</span> บุคลากรอื่นๆ</h3>
+        <div class="grid md:grid-cols-2 gap-4">
+         <div>
+          <label class="block text-sm font-semibold text-gray-600 mb-2">เจ้าหน้าที่ควบคุมเอกสาร :</label> <input type="text" id="docController" placeholder="ชื่อ" class="w-full px-4 py-3 rounded-xl border-2 border-violet-200 focus:border-violet-400 focus:outline-none transition-colors">
+         </div>
+         <div>
+          <label class="block text-sm font-semibold text-gray-600 mb-2">ตัวแทนฝ่ายบริหาร :</label> <input type="text" id="adminRep" placeholder="ชื่อ" class="w-full px-4 py-3 rounded-xl border-2 border-violet-200 focus:border-violet-400 focus:outline-none transition-colors">
+         </div>
+        </div>
+       </div><!-- Submit Button -->
+       <div class="md:col-span-2">
+        <button type="submit" id="darSubmitBtn" class="w-full btn-gradient text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2"> <span>📤</span> ส่งคำขอดำเนินการ </button>
+       </div>
+      </form>
+     </div>
+    </section><!-- Upload Progress Modal -->
+    <div id="uploadModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+     <div class="bg-white rounded-3xl max-w-md w-full p-6 animate-fade">
+      <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2"><span>⏳</span> กำลังส่งข้อมูล</h3>
+      <div class="mb-6">
+       <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+        <div id="uploadProgress" class="progress-bar bg-gradient-to-r from-indigo-400 to-purple-500 h-3"></div>
+       </div>
+       <div class="flex justify-between mt-3">
+        <p id="uploadStatus" class="text-sm text-gray-600">กำลังเตรียมข้อมูล...</p>
+        <p id="uploadPercentage" class="text-sm font-bold text-indigo-600">0%</p>
+       </div>
+      </div>
+     </div>
+    </div><!-- Edit Request Tab -->
+    <section id="panel-edit-request" class="tab-panel hidden">
+     <div class="bg-white rounded-3xl card-shadow p-6 mb-6 animate-fade">
+      <h2 class="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2"><span class="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center">✏️</span> ขอแก้ไขเอกสาร</h2>
+      <form id="editRequestForm" class="space-y-6">
+       <!-- Select Active Document -->
+       <div class="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-4">
+        <label class="block text-sm font-bold text-gray-700 mb-3">เลือกเอกสาร :</label> <select id="editSelectDoc" class="w-full px-4 py-3 rounded-xl border-2 border-blue-200 focus:border-blue-400 focus:outline-none transition-colors" onchange="loadEditDocData()" required> <option value="">-- เลือกเอกสารที่ต้องการแก้ไข --</option> </select>
+       </div><!-- Display Selected Document Info (Read-only) -->
+       <div id="editDocInfo" class="hidden bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl p-4">
+        <h3 class="font-bold text-gray-700 mb-4">ข้อมูลเอกสาร</h3>
+        <div class="grid md:grid-cols-2 gap-4">
+         <div>
+          <label class="block text-xs font-semibold text-gray-500 mb-1">รหัสเอกสาร :</label>
+          <p id="editDocCode" class="text-gray-800 font-semibold">-</p>
+         </div>
+         <div>
+          <label class="block text-xs font-semibold text-gray-500 mb-1">ชื่อเอกสาร :</label>
+          <p id="editDocName" class="text-gray-800 font-semibold">-</p>
+         </div>
+         <div>
+          <label class="block text-xs font-semibold text-gray-500 mb-1">ประเภท :</label>
+          <p id="editDocType" class="text-gray-800">-</p>
+         </div>
+         <div>
+          <label class="block text-xs font-semibold text-gray-500 mb-1">เวอร์ชั่นปัจจุบัน :</label>
+          <p id="editCurrentVersion" class="text-gray-800">-</p>
+         </div>
+        </div>
+       </div><!-- Edit Details -->
+       <div id="editDetailsSection" class="hidden bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-4">
+        <h3 class="font-bold text-gray-700 mb-4">รายละเอียดการแก้ไข</h3>
+        <div>
+         <label class="block text-sm font-semibold text-gray-600 mb-2">รายละเอียดที่ขอแก้ไข :</label> <textarea id="editActionDetails" rows="3" placeholder="ระบุรายละเอียดการแก้ไข..." class="w-full px-4 py-3 rounded-xl border-2 border-green-200 focus:border-green-400 focus:outline-none transition-colors resize-none" required></textarea>
+        </div>
+        <div class="mt-4">
+         <label class="block text-sm font-semibold text-gray-600 mb-2">วันที่ยืนยันการแก้ไข :</label> <input type="date" id="editDate" class="w-full px-4 py-3 rounded-xl border-2 border-green-200 focus:border-green-400 focus:outline-none transition-colors" required>
+        </div>
+       </div><!-- Requester Section -->
+       <div id="editRequesterSection" class="hidden bg-gradient-to-r from-yellow-50 to-orange-50 rounded-2xl p-4">
+        <h3 class="font-bold text-gray-700 mb-4 flex items-center gap-2"><span>👤</span> ผู้ขอแก้ไข</h3>
+        <div class="grid md:grid-cols-2 gap-4">
+         <div>
+          <label class="block text-sm font-semibold text-gray-600 mb-2">ชื่อ :</label> <input type="text" id="editRequesterName" placeholder="ชื่อผู้ขอ" class="w-full px-4 py-3 rounded-xl border-2 border-yellow-200 focus:border-yellow-400 focus:outline-none transition-colors" required>
+         </div>
+         <div>
+          <label class="block text-sm font-semibold text-gray-600 mb-2">ตำแหน่ง :</label> <input type="text" id="editRequesterPosition" placeholder="ตำแหน่ง" class="w-full px-4 py-3 rounded-xl border-2 border-yellow-200 focus:border-yellow-400 focus:outline-none transition-colors" required>
+         </div>
+        </div>
+       </div><!-- Approver Section -->
+       <div id="editApproverSection" class="hidden bg-gradient-to-r from-pink-50 to-rose-50 rounded-2xl p-4">
+        <h3 class="font-bold text-gray-700 mb-4 flex items-center gap-2"><span>✅</span> ผู้อนุมัติ</h3>
+        <div class="grid md:grid-cols-2 gap-4">
+         <div>
+          <label class="block text-sm font-semibold text-gray-600 mb-2">ชื่อ :</label> <input type="text" id="editApproverName" placeholder="ชื่อผู้อนุมัติ" class="w-full px-4 py-3 rounded-xl border-2 border-pink-200 focus:border-pink-400 focus:outline-none transition-colors" required>
+         </div>
+         <div>
+          <label class="block text-sm font-semibold text-gray-600 mb-2">ตำแหน่ง :</label> <input type="text" id="editApproverPosition" placeholder="ตำแหน่ง" class="w-full px-4 py-3 rounded-xl border-2 border-pink-200 focus:border-pink-400 focus:outline-none transition-colors" required>
+         </div>
+        </div>
+       </div><!-- Other Personnel Section -->
+       <div id="editOtherSection" class="hidden bg-gradient-to-r from-violet-50 to-purple-50 rounded-2xl p-4">
+        <h3 class="font-bold text-gray-700 mb-4 flex items-center gap-2"><span>👥</span> บุคลากรอื่นๆ</h3>
+        <div class="grid md:grid-cols-2 gap-4">
+         <div>
+          <label class="block text-sm font-semibold text-gray-600 mb-2">เจ้าหน้าที่ควบคุมเอกสาร :</label> <input type="text" id="editDocController" placeholder="ชื่อ" class="w-full px-4 py-3 rounded-xl border-2 border-violet-200 focus:border-violet-400 focus:outline-none transition-colors" required>
+         </div>
+         <div>
+          <label class="block text-sm font-semibold text-gray-600 mb-2">ตัวแทนฝ่ายบริหาร :</label> <input type="text" id="editAdminRep" placeholder="ชื่อ" class="w-full px-4 py-3 rounded-xl border-2 border-violet-200 focus:border-violet-400 focus:outline-none transition-colors" required>
+         </div>
+        </div>
+       </div><!-- File Upload Section -->
+       <div id="editFileSection" class="hidden bg-gradient-to-r from-cyan-50 to-blue-50 rounded-2xl p-4">
+        <h3 class="font-bold text-gray-700 mb-4 flex items-center gap-2"><span>📎</span> ไฟล์แนบ (ไม่บังคับ)</h3>
+        <div class="border-2 border-dashed border-cyan-300 rounded-xl p-6 text-center bg-white/50 hover:bg-cyan-50/50 transition-colors cursor-pointer" onclick="document.getElementById('editFileInput').click()">
+         <div id="editFilePreview" class="hidden mb-4"><img id="editPreviewImg" src="" alt="preview" class="max-h-40 mx-auto rounded-lg">
+          <p id="editFileName" class="text-sm text-gray-600 mt-2"></p>
+         </div>
+         <div id="editFileIcon">
+          <p class="text-4xl mb-2">📁</p>
+          <p class="text-sm font-semibold text-gray-700">คลิกเพื่ออัปโหลดไฟล์</p>
+          <p class="text-xs text-gray-500 mt-1">PDF, ภาพ, Word, Excel (สูงสุด 10MB)</p>
+         </div><input type="file" id="editFileInput" class="hidden" onchange="handleEditFileSelect()" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx">
+        </div>
+        <div id="editFileError" class="mt-2 text-sm text-red-600 hidden"></div>
+       </div><!-- Submit Button -->
+       <div class="md:col-span-2">
+        <button type="submit" id="editRequestSubmitBtn" class="w-full btn-gradient text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2"> <span>📤</span> ส่งคำขอแก้ไข </button>
+       </div>
+      </form>
+     </div>
+    </section><!-- Cancel Request Tab -->
+    <section id="panel-cancel-request" class="tab-panel hidden">
+     <div class="bg-white rounded-3xl card-shadow p-6 mb-6 animate-fade">
+      <h2 class="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2"><span class="w-8 h-8 rounded-xl bg-red-100 flex items-center justify-center">❌</span> ขอยกเลิกเอกสาร</h2>
+      <form id="cancelRequestForm" class="space-y-6">
+       <!-- Select Active Document -->
+       <div class="bg-gradient-to-r from-red-50 to-rose-50 rounded-2xl p-4">
+        <label class="block text-sm font-bold text-gray-700 mb-3">เลือกเอกสาร :</label> <select id="cancelSelectDoc" class="w-full px-4 py-3 rounded-xl border-2 border-red-200 focus:border-red-400 focus:outline-none transition-colors" onchange="loadCancelDocData()" required> <option value="">-- เลือกเอกสารที่ต้องการยกเลิก --</option> </select>
+       </div><!-- Display Selected Document Info (Read-only) -->
+       <div id="cancelDocInfo" class="hidden bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl p-4">
+        <h3 class="font-bold text-gray-700 mb-4">ข้อมูลเอกสาร</h3>
+        <div class="grid md:grid-cols-2 gap-4">
+         <div>
+          <label class="block text-xs font-semibold text-gray-500 mb-1">รหัสเอกสาร :</label>
+          <p id="cancelDocCode" class="text-gray-800 font-semibold">-</p>
+         </div>
+         <div>
+          <label class="block text-xs font-semibold text-gray-500 mb-1">ชื่อเอกสาร :</label>
+          <p id="cancelDocName2" class="text-gray-800 font-semibold">-</p>
+         </div>
+         <div>
+          <label class="block text-xs font-semibold text-gray-500 mb-1">ประเภท :</label>
+          <p id="cancelDocType" class="text-gray-800">-</p>
+         </div>
+         <div>
+          <label class="block text-xs font-semibold text-gray-500 mb-1">เวอร์ชั่นปัจจุบัน :</label>
+          <p id="cancelCurrentVersion" class="text-gray-800">-</p>
+         </div>
+        </div>
+       </div><!-- Cancel Details -->
+       <div id="cancelDetailsSection" class="hidden bg-gradient-to-r from-orange-50 to-amber-50 rounded-2xl p-4">
+        <h3 class="font-bold text-gray-700 mb-4">รายละเอียดการยกเลิก</h3>
+        <div>
+         <label class="block text-sm font-semibold text-gray-600 mb-2">เหตุผลในการยกเลิก :</label> <textarea id="cancelReason" rows="3" placeholder="ระบุเหตุผลในการยกเลิกเอกสาร..." class="w-full px-4 py-3 rounded-xl border-2 border-orange-200 focus:border-orange-400 focus:outline-none transition-colors resize-none" required></textarea>
+        </div>
+        <div class="mt-4">
+         <label class="block text-sm font-semibold text-gray-600 mb-2">วันที่ยกเลิก :</label> <input type="date" id="cancelDate" class="w-full px-4 py-3 rounded-xl border-2 border-orange-200 focus:border-orange-400 focus:outline-none transition-colors" required>
+        </div>
+       </div><!-- Requester Section -->
+       <div id="cancelRequesterSection" class="hidden bg-gradient-to-r from-yellow-50 to-orange-50 rounded-2xl p-4">
+        <h3 class="font-bold text-gray-700 mb-4 flex items-center gap-2"><span>👤</span> ผู้ขอยกเลิก</h3>
+        <div class="grid md:grid-cols-2 gap-4">
+         <div>
+          <label class="block text-sm font-semibold text-gray-600 mb-2">ชื่อ :</label> <input type="text" id="cancelRequesterName" placeholder="ชื่อผู้ขอ" class="w-full px-4 py-3 rounded-xl border-2 border-yellow-200 focus:border-yellow-400 focus:outline-none transition-colors" required>
+         </div>
+         <div>
+          <label class="block text-sm font-semibold text-gray-600 mb-2">ตำแหน่ง :</label> <input type="text" id="cancelRequesterPosition" placeholder="ตำแหน่ง" class="w-full px-4 py-3 rounded-xl border-2 border-yellow-200 focus:border-yellow-400 focus:outline-none transition-colors" required>
+         </div>
+        </div>
+       </div><!-- Approver Section -->
+       <div id="cancelApproverSection" class="hidden bg-gradient-to-r from-pink-50 to-rose-50 rounded-2xl p-4">
+        <h3 class="font-bold text-gray-700 mb-4 flex items-center gap-2"><span>✅</span> ผู้อนุมัติ</h3>
+        <div class="grid md:grid-cols-2 gap-4">
+         <div>
+          <label class="block text-sm font-semibold text-gray-600 mb-2">ชื่อ :</label> <input type="text" id="cancelApproverName" placeholder="ชื่อผู้อนุมัติ" class="w-full px-4 py-3 rounded-xl border-2 border-pink-200 focus:border-pink-400 focus:outline-none transition-colors" required>
+         </div>
+         <div>
+          <label class="block text-sm font-semibold text-gray-600 mb-2">ตำแหน่ง :</label> <input type="text" id="cancelApproverPosition" placeholder="ตำแหน่ง" class="w-full px-4 py-3 rounded-xl border-2 border-pink-200 focus:border-pink-400 focus:outline-none transition-colors" required>
+         </div>
+        </div>
+       </div><!-- Other Personnel Section -->
+       <div id="cancelOtherSection" class="hidden bg-gradient-to-r from-violet-50 to-purple-50 rounded-2xl p-4">
+        <h3 class="font-bold text-gray-700 mb-4 flex items-center gap-2"><span>👥</span> บุคลากรอื่นๆ</h3>
+        <div class="grid md:grid-cols-2 gap-4">
+         <div>
+          <label class="block text-sm font-semibold text-gray-600 mb-2">เจ้าหน้าที่ควบคุมเอกสาร :</label> <input type="text" id="cancelDocController" placeholder="ชื่อ" class="w-full px-4 py-3 rounded-xl border-2 border-violet-200 focus:border-violet-400 focus:outline-none transition-colors" required>
+         </div>
+         <div>
+          <label class="block text-sm font-semibold text-gray-600 mb-2">ตัวแทนฝ่ายบริหาร :</label> <input type="text" id="cancelAdminRep" placeholder="ชื่อ" class="w-full px-4 py-3 rounded-xl border-2 border-violet-200 focus:border-violet-400 focus:outline-none transition-colors" required>
+         </div>
+        </div>
+       </div><!-- File Upload Section -->
+       <div id="cancelFileSection" class="hidden bg-gradient-to-r from-cyan-50 to-blue-50 rounded-2xl p-4">
+        <h3 class="font-bold text-gray-700 mb-4 flex items-center gap-2"><span>📎</span> ไฟล์แนบ (ไม่บังคับ)</h3>
+        <div class="border-2 border-dashed border-cyan-300 rounded-xl p-6 text-center bg-white/50 hover:bg-cyan-50/50 transition-colors cursor-pointer" onclick="document.getElementById('cancelFileInput').click()">
+         <div id="cancelFilePreview" class="hidden mb-4"><img id="cancelPreviewImg" src="" alt="preview" class="max-h-40 mx-auto rounded-lg">
+          <p id="cancelFileName" class="text-sm text-gray-600 mt-2"></p>
+         </div>
+         <div id="cancelFileIcon">
+          <p class="text-4xl mb-2">📁</p>
+          <p class="text-sm font-semibold text-gray-700">คลิกเพื่ออัปโหลดไฟล์</p>
+          <p class="text-xs text-gray-500 mt-1">PDF, ภาพ, Word, Excel (สูงสุด 10MB)</p>
+         </div><input type="file" id="cancelFileInput" class="hidden" onchange="handleCancelFileSelect()" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx">
+        </div>
+        <div id="cancelFileError" class="mt-2 text-sm text-red-600 hidden"></div>
+       </div><!-- Submit Button -->
+       <div class="md:col-span-2">
+        <button type="submit" id="cancelRequestSubmitBtn" class="w-full bg-red-500 hover:bg-red-600 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2"> <span>❌</span> ส่งคำขอยกเลิก </button>
+       </div>
+      </form>
+     </div>
+    </section>
+    <section id="panel-masterlist" class="tab-panel hidden">
+     <div class="bg-white rounded-3xl card-shadow p-6 animate-fade">
+      <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+       <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2"><span class="w-8 h-8 rounded-xl bg-green-100 flex items-center justify-center">📋</span> เอกสารทั้งหมด</h2>
+       <div class="flex gap-2">
+        <input type="text" id="searchMaster" placeholder="🔍 ค้นหาเอกสาร..." class="px-4 py-2 rounded-xl border-2 border-indigo-100 focus:border-indigo-400 focus:outline-none" oninput="filterMasterlist()"> <select id="filterStatus" class="px-4 py-2 rounded-xl border-2 border-indigo-100 focus:border-indigo-400 focus:outline-none" onchange="filterMasterlist()"> <option value="">ทุกสถานะ</option> <option value="active">ใช้งาน</option> <option value="cancelled">ยกเลิก</option> </select>
+       </div>
+      </div>
+      <div class="overflow-x-auto">
+       <table class="w-full">
+        <thead>
+         <tr class="bg-gradient-to-r from-indigo-50 to-purple-50">
+          <th class="px-4 py-3 text-left text-sm font-bold text-indigo-700 rounded-l-xl">รหัส</th>
+          <th class="px-4 py-3 text-left text-sm font-bold text-indigo-700">ชื่อเอกสาร</th>
+          <th class="px-4 py-3 text-left text-sm font-bold text-indigo-700">ประเภท</th>
+          <th class="px-4 py-3 text-left text-sm font-bold text-indigo-700">เวอร์ชัน</th>
+          <th class="px-4 py-3 text-left text-sm font-bold text-indigo-700">สถานะ</th>
+          <th class="px-4 py-3 text-left text-sm font-bold text-indigo-700 rounded-r-xl">วันที่อัปเดต</th>
+         </tr>
+        </thead>
+        <tbody id="masterlistBody" class="divide-y divide-indigo-50">
+         <!-- Dynamic content -->
+        </tbody>
+       </table>
+      </div>
+      <div id="emptyMasterlist" class="text-center py-12 text-gray-400 hidden">
+       <div class="text-6xl mb-4">
+        📭
+       </div>
+       <p class="text-lg">ยังไม่มีเอกสาร</p>
+       <p class="text-sm">เริ่มสร้างเอกสารแรกของคุณได้เลย!</p>
+      </div>
+     </div>
+    </section><!-- Collection Tab -->
+    <section id="panel-collection" class="tab-panel hidden">
+     <div class="bg-white rounded-3xl card-shadow p-6 animate-fade">
+      <h2 class="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2"><span class="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center">📁</span> รวบรวมเอกสารตามโฟลเดอร์</h2>
+      <div id="collectionGrid" class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+       <!-- Dynamic content -->
+      </div>
+      <div id="emptyCollection" class="text-center py-12 text-gray-400 hidden">
+       <div class="text-6xl mb-4">
+        📂
+       </div>
+       <p class="text-lg">ยังไม่มีโฟลเดอร์</p>
+      </div>
+     </div>
+    </section><!-- DAR LOG Tab -->
+    <section id="panel-dar-log" class="tab-panel hidden">
+     <div class="bg-white rounded-3xl card-shadow p-6 animate-fade">
+      <h2 class="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2"><span class="w-8 h-8 rounded-xl bg-rose-100 flex items-center justify-center">📊</span> DAR LOG (Document Action Record)</h2>
+      <div class="overflow-x-auto">
+       <table class="w-full">
+        <thead>
+         <tr class="bg-gradient-to-r from-rose-50 to-pink-50">
+          <th class="px-4 py-3 text-left text-sm font-bold text-rose-700 rounded-l-xl">วันที่</th>
+          <th class="px-4 py-3 text-left text-sm font-bold text-rose-700">DAR No.</th>
+          <th class="px-4 py-3 text-left text-sm font-bold text-rose-700">รหัสเอกสาร</th>
+          <th class="px-4 py-3 text-left text-sm font-bold text-rose-700">ชื่อเอกสาร</th>
+          <th class="px-4 py-3 text-left text-sm font-bold text-rose-700">เวอร์ชัน</th>
+          <th class="px-4 py-3 text-left text-sm font-bold text-rose-700 rounded-r-xl">การดำเนินการ</th>
+         </tr>
+        </thead>
+        <tbody id="darBody" class="divide-y divide-rose-50">
+         <!-- Dynamic content -->
+        </tbody>
+       </table>
+      </div>
+      <div id="emptyDar" class="text-center py-12 text-gray-400 hidden">
+       <div class="text-6xl mb-4">
+        📝
+       </div>
+       <p class="text-lg">ยังไม่มีบันทึกการดำเนินการ</p>
+      </div>
+     </div>
+    </section>
+   </main><!-- Edit Version Modal -->
+   <div id="editModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 animate-fade">
+     <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2"><span>✏️</span> แก้ไขเวอร์ชันเอกสาร</h3>
+     <form id="editForm">
+      <input type="hidden" id="editDocId">
+      <div class="mb-4">
+       <label class="block text-sm font-semibold text-gray-600 mb-2">เวอร์ชันใหม่</label> <input type="text" id="editVersion" placeholder="เช่น 1.1, 2.0" class="w-full px-4 py-3 rounded-xl border-2 border-indigo-100 focus:border-indigo-400 focus:outline-none" required>
+      </div>
+      <div class="mb-4">
+       <label class="block text-sm font-semibold text-gray-600 mb-2">หมายเหตุการแก้ไข</label> <textarea id="editNote" rows="3" placeholder="รายละเอียดการแก้ไข..." class="w-full px-4 py-3 rounded-xl border-2 border-indigo-100 focus:border-indigo-400 focus:outline-none resize-none"></textarea>
+      </div>
+      <div class="flex gap-3">
+       <button type="button" onclick="closeEditModal()" class="flex-1 py-3 rounded-xl border-2 border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 transition-colors">ยกเลิก</button> <button type="submit" id="saveVersionBtn" class="flex-1 btn-gradient text-white py-3 rounded-xl font-semibold shadow-lg">บันทึก</button>
+      </div>
+     </form>
+    </div>
+   </div><!-- Cancel Confirm Modal -->
+   <div id="cancelModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 animate-fade text-center">
+     <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+      <span class="text-3xl">⚠️</span>
+     </div>
+     <h3 class="text-lg font-bold text-gray-800 mb-2">ยืนยันยกเลิกเอกสาร?</h3>
+     <p id="cancelDocName" class="text-gray-500 mb-6">เอกสารนี้จะถูกยกเลิกการใช้งาน</p><input type="hidden" id="cancelDocId">
+     <div class="flex gap-3">
+      <button onclick="closeCancelModal()" class="flex-1 py-3 rounded-xl border-2 border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 transition-colors">ไม่ใช่</button> <button onclick="confirmCancel()" id="confirmCancelBtn" class="flex-1 bg-red-500 hover:bg-red-600 text-white py-3 rounded-xl font-semibold transition-colors">ยกเลิกเอกสาร</button>
+     </div>
+    </div>
+   </div><!-- Toast -->
+   <div id="toast" class="fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-2xl shadow-xl transform translate-y-20 opacity-0 transition-all duration-300 z-50">
+    <span id="toastMsg">บันทึกสำเร็จ!</span>
+   </div>
+  </div>
+  <script>
+    // Default config
+    const defaultConfig = {
+      system_title: 'ระบบจัดการเอกสาร',
+      company_name: 'บริษัท ABC จำกัด',
+      primary_color: '#6366f1',
+      secondary_color: '#8b5cf6',
+      bg_color: '#f5f3ff',
+      text_color: '#1f2937',
+      accent_color: '#10b981'
+    };
+
+    let documents = [];
+    let currentTab = 'create';
+    let isLoading = false;
+    let currentUploadFile = null;
+    let currentUploadType = null; // 'dar' or 'edit'
+
+    // Configuration
+    let CONFIG = {
+      GAS_URL: 'https://script.google.com/macros/s/AKfycbzBaZhU3iMmDp6o8sMIgDVvmS4QHc1WCjWX6P7Rwx8Pg6iRSng2tZdvJi6F0S4xNIRQ/exec',
+      ADMIN_EMAIL: 'p.kornjaroen@gmail.com',
+      MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB
+      ALLOWED_EXTENSIONS: ['.pdf', '.jpg', '.jpeg', '.png', '.doc', '.docx', '.xls', '.xlsx'],
+      ALLOWED_TYPES: ['application/pdf', 'image/jpeg', 'image/png', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
+    };
+
+    // Document type labels
+    const typeLabels = {
+      procedure: 'Procedure',
+      work_instruction: 'Work Instruction',
+      form: 'Form',
+      record: 'Record',
+      manual: 'Manual',
+      policy: 'Policy'
+    };
+
+    // Version auto-increment helper
+    function incrementVersion(currentVersion) {
+      if (!currentVersion) return '01';
+      const parts = currentVersion.split('.');
+      const lastPart = parseInt(parts[parts.length - 1]) || 0;
+      parts[parts.length - 1] = String(lastPart + 1).padStart(2, '0');
+      return parts.join('.');
+    }
+
+    function generateDarNo() {
+      const now = new Date();
+      const year = now.getFullYear() + 543; // Thai Buddhist year
+      
+      // Get max sequence from existing DAR records in this year
+      const currentYearRecords = documents.filter(d => {
+        const darYear = d.dar_no?.split('/')[1];
+        return darYear === year.toString();
+      });
+      
+      const maxSequence = currentYearRecords.length > 0 
+        ? Math.max(...currentYearRecords.map(d => d.dar_sequence || 0))
+        : 0;
+      
+      const sequence = maxSequence + 1;
+      const sequenceStr = String(sequence).padStart(2, '0');
+      return { 
+        dar_no: `DAR${sequenceStr}/${year}`,
+        sequence: sequence
+      };
+    }
+
+    // Data handler
+    const dataHandler = {
+      onDataChanged(data) {
+        documents = data || [];
+        renderAll();
+      }
+    };
+
+    // Initialize SDKs
+    async function initApp() {
+      // Init Element SDK
+      if (window.elementSdk) {
+        window.elementSdk.init({
+          defaultConfig,
+          onConfigChange: async (config) => {
+            document.getElementById('systemTitle').textContent = config.system_title || defaultConfig.system_title;
+            document.getElementById('companyName').textContent = config.company_name || defaultConfig.company_name;
+            CONFIG.GAS_URL = config.gs_url || '';
+            CONFIG.ADMIN_EMAIL = config.admin_email || '';
+          },
+          mapToCapabilities: (config) => ({
+            recolorables: [
+              { get: () => config.primary_color || defaultConfig.primary_color, set: (v) => window.elementSdk.setConfig({ primary_color: v }) },
+              { get: () => config.bg_color || defaultConfig.bg_color, set: (v) => window.elementSdk.setConfig({ bg_color: v }) },
+              { get: () => config.text_color || defaultConfig.text_color, set: (v) => window.elementSdk.setConfig({ text_color: v }) }
+            ],
+            borderables: [],
+            fontEditable: {
+              get: () => config.font_family || 'Sarabun',
+              set: (v) => window.elementSdk.setConfig({ font_family: v })
+            },
+            fontSizeable: undefined
+          }),
+          mapToEditPanelValues: (config) => new Map([
+            ['system_title', config.system_title || defaultConfig.system_title],
+            ['company_name', config.company_name || defaultConfig.company_name]
+          ])
+        });
+      }
+
+      // Init Data SDK
+      if (window.dataSdk) {
+        const result = await window.dataSdk.init(dataHandler);
+        if (!result.isOk) {
+          console.error('Failed to init data SDK');
+        }
+      }
+
+      // Setup form handlers
+      setupFormHandlers();
+      renderAll();
+    }
+
+    function setupFormHandlers() {
+      // Create new document form
+      document.getElementById('darForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (isLoading || documents.length >= 999) {
+          if (documents.length >= 999) showToast('⚠️ ถึงขีดจำกัด 999 เอกสารแล้ว', 'warning');
+          return;
+        }
+
+        const docType = document.getElementById('docType').value;
+        const docName = document.getElementById('darDocName').value.trim();
+        const docCode = document.getElementById('darDocCode').value.trim();
+        const department = document.getElementById('darDepartment').value.trim();
+        const editVersion = document.getElementById('darEditVersion').value.trim() || '01';
+        const darDate = document.getElementById('darDate').value || new Date().toISOString().split('T')[0];
+        const requesterName = document.getElementById('requesterName').value.trim();
+        const requesterPos = document.getElementById('requesterPosition').value.trim();
+        const approverName = document.getElementById('approverName').value.trim();
+        const approverPos = document.getElementById('approverPosition').value.trim();
+        const docController = document.getElementById('docController').value.trim();
+        const adminRep = document.getElementById('adminRep').value.trim();
+        const actionDetails = document.getElementById('darActionDetails').value.trim();
+
+        if (!docType || !docName || !docCode) {
+          showToast('❌ กรุณากรอกข้อมูลที่จำเป็น', 'error');
+          return;
+        }
+
+        setLoading(true, 'darSubmitBtn');
+        const now = new Date().toISOString();
+        const darInfo = generateDarNo();
+        
+        const newDar = {
+          id: Date.now().toString(),
+          dar_no: darInfo.dar_no,
+          dar_sequence: darInfo.sequence,
+          dar_type: 'create',
+          doc_code: docCode,
+          doc_name: docName,
+          doc_type: docType,
+          department: department,
+          version: editVersion,
+          dar_date: darDate,
+          requester_name: requesterName,
+          requester_position: requesterPos,
+          approver_name: approverName,
+          approver_position: approverPos,
+          doc_controller: docController,
+          admin_representative: adminRep,
+          action_details: actionDetails,
+          file_url: '',
+          file_name: '',
+          status: 'active',
+          created_at: now,
+          updated_at: now
+        };
+
+        if (CONFIG.GAS_URL) {
+          const success = await sendToGAS(newDar);
+          if (success) {
+            if (window.dataSdk) {
+              const result = await window.dataSdk.create(newDar);
+              if (result.isOk) {
+                document.getElementById('darForm').reset();
+              }
+            }
+          }
+        } else {
+          if (window.dataSdk) {
+            const result = await window.dataSdk.create(newDar);
+            if (result.isOk) {
+              showToast('✅ ส่งคำขอสำเร็จ!');
+              document.getElementById('darForm').reset();
+              clearFilePreview('dar');
+            } else {
+              showToast('❌ เกิดข้อผิดพลาด', 'error');
+            }
+          }
+        }
+        setLoading(false, 'darSubmitBtn');
+      });
+
+      // Edit request form
+      document.getElementById('editRequestForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (isLoading) return;
+
+        const selectedDocId = document.getElementById('editSelectDoc').value;
+        const actionDetails = document.getElementById('editActionDetails').value.trim();
+        const editDate = document.getElementById('editDate').value;
+        const requesterName = document.getElementById('editRequesterName').value.trim();
+        const requesterPos = document.getElementById('editRequesterPosition').value.trim();
+        const approverName = document.getElementById('editApproverName').value.trim();
+        const approverPos = document.getElementById('editApproverPosition').value.trim();
+        const docController = document.getElementById('editDocController').value.trim();
+        const adminRep = document.getElementById('editAdminRep').value.trim();
+
+        if (!selectedDocId || !actionDetails) {
+          showToast('❌ กรุณากรอกข้อมูลที่จำเป็น', 'error');
+          return;
+        }
+
+        setLoading(true, 'editRequestSubmitBtn');
+        const selectedDoc = documents.find(d => d.__backendId === selectedDocId || d.id === selectedDocId);
+        if (!selectedDoc) return;
+
+        // Calculate new version
+        const allActionsForDoc = documents.filter(d => d.doc_code === selectedDoc.doc_code);
+        const maxVersion = Math.max(...allActionsForDoc.map(d => parseInt(d.version) || 0), 0);
+        const newVersion = String(maxVersion + 1).padStart(2, '0');
+
+        const now = new Date().toISOString();
+        const darInfo = generateDarNo();
+
+        const editRecord = {
+          id: Date.now().toString(),
+          dar_no: darInfo.dar_no,
+          dar_sequence: darInfo.sequence,
+          dar_type: 'edit',
+          doc_code: selectedDoc.doc_code,
+          doc_name: selectedDoc.doc_name,
+          doc_type: selectedDoc.doc_type,
+          department: selectedDoc.department,
+          version: newVersion,
+          dar_date: editDate,
+          requester_name: requesterName,
+          requester_position: requesterPos,
+          approver_name: approverName,
+          approver_position: approverPos,
+          doc_controller: docController,
+          admin_representative: adminRep,
+          action_details: actionDetails,
+          file_url: '',
+          file_name: '',
+          status: 'active',
+          created_at: now,
+          updated_at: now
+        };
+
+        if (CONFIG.GAS_URL) {
+          const success = await sendToGAS(editRecord);
+          if (success) {
+            if (window.dataSdk) {
+              const result = await window.dataSdk.create(editRecord);
+              if (result.isOk) {
+                showToast('✅ ส่งคำขอแก้ไขสำเร็จ!');
+                document.getElementById('editRequestForm').reset();
+                document.getElementById('editSelectDoc').value = '';
+                resetEditForm();
+              }
+            }
+          }
+        } else {
+          if (window.dataSdk) {
+            const result = await window.dataSdk.create(editRecord);
+            if (result.isOk) {
+              showToast('✅ ส่งคำขอแก้ไขสำเร็จ!');
+              document.getElementById('editRequestForm').reset();
+              document.getElementById('editSelectDoc').value = '';
+              resetEditForm();
+              clearFilePreview('edit');
+            } else {
+              showToast('❌ เกิดข้อผิดพลาด', 'error');
+            }
+          }
+        }
+        setLoading(false, 'editRequestSubmitBtn');
+      });
+
+      // Cancel request form
+      document.getElementById('cancelRequestForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (isLoading) return;
+
+        const selectedDocId = document.getElementById('cancelSelectDoc').value;
+        const cancelReason = document.getElementById('cancelReason').value.trim();
+        const cancelDate = document.getElementById('cancelDate').value;
+        const requesterName = document.getElementById('cancelRequesterName').value.trim();
+        const requesterPos = document.getElementById('cancelRequesterPosition').value.trim();
+        const approverName = document.getElementById('cancelApproverName').value.trim();
+        const approverPos = document.getElementById('cancelApproverPosition').value.trim();
+        const docController = document.getElementById('cancelDocController').value.trim();
+        const adminRep = document.getElementById('cancelAdminRep').value.trim();
+
+        if (!selectedDocId || !cancelReason) {
+          showToast('❌ กรุณากรอกข้อมูลที่จำเป็น', 'error');
+          return;
+        }
+
+        setLoading(true, 'cancelRequestSubmitBtn');
+        const selectedDoc = documents.find(d => d.__backendId === selectedDocId || d.id === selectedDocId);
+        if (!selectedDoc) return;
+
+        const now = new Date().toISOString();
+        const darInfo = generateDarNo();
+
+        const cancelRecord = {
+          id: Date.now().toString(),
+          dar_no: darInfo.dar_no,
+          dar_sequence: darInfo.sequence,
+          dar_type: 'cancel',
+          doc_code: selectedDoc.doc_code,
+          doc_name: selectedDoc.doc_name,
+          doc_type: selectedDoc.doc_type,
+          department: selectedDoc.department,
+          version: selectedDoc.version,
+          dar_date: cancelDate,
+          requester_name: requesterName,
+          requester_position: requesterPos,
+          approver_name: approverName,
+          approver_position: approverPos,
+          doc_controller: docController,
+          admin_representative: adminRep,
+          cancel_reason: cancelReason,
+          action_details: cancelReason,
+          status: 'active',
+          created_at: now,
+          updated_at: now
+        };
+
+        if (window.dataSdk) {
+          const result = await window.dataSdk.create(cancelRecord);
+          if (result.isOk) {
+            // Now update all create records for this document to have cancelled status
+            const createRecords = documents.filter(d => d.doc_code === selectedDoc.doc_code && d.dar_type === 'create');
+            for (const doc of createRecords) {
+              if (doc.__backendId) {
+                const updatedDoc = { ...doc, status: 'cancelled' };
+                await window.dataSdk.update(updatedDoc);
+              }
+            }
+            showToast('✅ ส่งคำขอยกเลิกสำเร็จ!');
+            document.getElementById('cancelRequestForm').reset();
+            document.getElementById('cancelSelectDoc').value = '';
+            resetCancelForm();
+          } else {
+            showToast('❌ เกิดข้อผิดพลาด', 'error');
+          }
+        }
+        setLoading(false, 'cancelRequestSubmitBtn');
+      });
+    }
+
+    function loadEditDocData() {
+      const selectedId = document.getElementById('editSelectDoc').value;
+      if (!selectedId) {
+        resetEditForm();
+        return;
+      }
+
+      const doc = documents.find(d => d.__backendId === selectedId || d.id === selectedId);
+      if (!doc) return;
+
+      document.getElementById('editDocCode').textContent = doc.doc_code;
+      document.getElementById('editDocName').textContent = doc.doc_name;
+      document.getElementById('editDocType').textContent = typeLabels[doc.doc_type] || doc.doc_type;
+      document.getElementById('editCurrentVersion').textContent = `v${doc.version}`;
+      document.getElementById('editDate').value = new Date().toISOString().split('T')[0];
+
+      document.getElementById('editDocInfo').classList.remove('hidden');
+      document.getElementById('editDetailsSection').classList.remove('hidden');
+      document.getElementById('editRequesterSection').classList.remove('hidden');
+      document.getElementById('editApproverSection').classList.remove('hidden');
+      document.getElementById('editOtherSection').classList.remove('hidden');
+      document.getElementById('editFileSection').classList.remove('hidden');
+    }
+
+    function resetEditForm() {
+      document.getElementById('editDocInfo').classList.add('hidden');
+      document.getElementById('editDetailsSection').classList.add('hidden');
+      document.getElementById('editRequesterSection').classList.add('hidden');
+      document.getElementById('editApproverSection').classList.add('hidden');
+      document.getElementById('editOtherSection').classList.add('hidden');
+      document.getElementById('editFileSection').classList.add('hidden');
+      document.getElementById('editActionDetails').value = '';
+      document.getElementById('editDate').value = '';
+      document.getElementById('editRequesterName').value = '';
+      document.getElementById('editRequesterPosition').value = '';
+      document.getElementById('editApproverName').value = '';
+      document.getElementById('editApproverPosition').value = '';
+      document.getElementById('editDocController').value = '';
+      document.getElementById('editAdminRep').value = '';
+    }
+
+    function loadCancelDocData() {
+      const selectedId = document.getElementById('cancelSelectDoc').value;
+      if (!selectedId) {
+        resetCancelForm();
+        return;
+      }
+
+      const doc = documents.find(d => d.__backendId === selectedId || d.id === selectedId);
+      if (!doc) return;
+
+      document.getElementById('cancelDocCode').textContent = doc.doc_code;
+      document.getElementById('cancelDocName2').textContent = doc.doc_name;
+      document.getElementById('cancelDocType').textContent = typeLabels[doc.doc_type] || doc.doc_type;
+      document.getElementById('cancelCurrentVersion').textContent = `v${doc.version}`;
+      document.getElementById('cancelDate').value = new Date().toISOString().split('T')[0];
+
+      document.getElementById('cancelDocInfo').classList.remove('hidden');
+      document.getElementById('cancelDetailsSection').classList.remove('hidden');
+      document.getElementById('cancelRequesterSection').classList.remove('hidden');
+      document.getElementById('cancelApproverSection').classList.remove('hidden');
+      document.getElementById('cancelOtherSection').classList.remove('hidden');
+      document.getElementById('cancelFileSection').classList.remove('hidden');
+    }
+
+    function resetCancelForm() {
+      document.getElementById('cancelDocInfo').classList.add('hidden');
+      document.getElementById('cancelDetailsSection').classList.add('hidden');
+      document.getElementById('cancelRequesterSection').classList.add('hidden');
+      document.getElementById('cancelApproverSection').classList.add('hidden');
+      document.getElementById('cancelOtherSection').classList.add('hidden');
+      document.getElementById('cancelFileSection').classList.add('hidden');
+      document.getElementById('cancelReason').value = '';
+      document.getElementById('cancelDate').value = '';
+      document.getElementById('cancelRequesterName').value = '';
+      document.getElementById('cancelRequesterPosition').value = '';
+      document.getElementById('cancelApproverName').value = '';
+      document.getElementById('cancelApproverPosition').value = '';
+      document.getElementById('cancelDocController').value = '';
+      document.getElementById('cancelAdminRep').value = '';
+    }
+
+    function setLoading(loading, btnId) {
+      isLoading = loading;
+      const btn = document.getElementById(btnId);
+      if (btn) {
+        btn.disabled = loading;
+        btn.style.opacity = loading ? '0.6' : '1';
+      }
+    }
+
+    function switchTab(tab) {
+      currentTab = tab;
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('tab-active');
+        btn.classList.add('text-gray-600', 'hover:bg-indigo-100');
+      });
+      document.getElementById(`tab-${tab}`).classList.add('tab-active');
+      document.getElementById(`tab-${tab}`).classList.remove('text-gray-600', 'hover:bg-indigo-100');
+
+      document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.add('hidden'));
+      const panel = document.getElementById(`panel-${tab}`);
+      panel.classList.remove('hidden');
+      panel.classList.add('animate-fade');
+      
+      // If switching to dashboard, update it
+      if (tab === 'dashboard') {
+        renderDashboard();
+      }
+    }
+
+    function renderAll() {
+      renderDocCount();
+      renderDashboard();
+      renderMasterlist();
+      renderDarLog();
+      // Update all visible content automatically
+      const activePanel = document.querySelector('.tab-panel:not(.hidden)');
+      if (activePanel?.id === 'panel-dashboard') {
+        renderDashboard();
+      } else if (activePanel?.id === 'panel-masterlist') {
+        renderMasterlist();
+      } else if (activePanel?.id === 'panel-dar-log') {
+        renderDarLog();
+      }
+    }
+
+    function renderDocCount() {
+      const activeCount = documents.filter(d => d.status === 'active').length;
+      document.getElementById('docCount').textContent = `${activeCount} เอกสาร`;
+    }
+
+    function renderDashboard() {
+      const createDocs = documents.filter(d => d.dar_type === 'create');
+      const editRecords = documents.filter(d => d.dar_type === 'edit');
+      const cancelRecords = documents.filter(d => d.dar_type === 'cancel');
+      
+      const totalDocs = createDocs.length;
+      const activeDocs = createDocs.filter(d => d.status === 'active').length;
+      const cancelledDocs = createDocs.filter(d => d.status === 'cancelled').length;
+      const totalRecords = documents.length;
+
+      // Update KPI cards
+      document.getElementById('dashTotalDocs').textContent = totalDocs;
+      document.getElementById('dashActiveDocs').textContent = activeDocs;
+      document.getElementById('dashCancelledDocs').textContent = cancelledDocs;
+      document.getElementById('dashTotalRecords').textContent = totalRecords;
+
+      // Update action counts
+      document.getElementById('dashCreateCount').textContent = createDocs.length;
+      document.getElementById('dashEditCount').textContent = editRecords.length;
+      document.getElementById('dashCancelCount').textContent = cancelRecords.length;
+
+      // Render document type distribution
+      const typeCount = {};
+      createDocs.forEach(doc => {
+        typeCount[doc.doc_type] = (typeCount[doc.doc_type] || 0) + 1;
+      });
+
+      const typeDistDiv = document.getElementById('dashTypeDistribution');
+      if (Object.keys(typeCount).length === 0) {
+        typeDistDiv.innerHTML = '<p class="text-gray-400 text-center py-4">ยังไม่มีเอกสาร</p>';
+      } else {
+        typeDistDiv.innerHTML = Object.entries(typeCount).map(([type, count]) => {
+          const percent = totalDocs > 0 ? Math.round((count / totalDocs) * 100) : 0;
+          const typeLabel = typeLabels[type] || type;
+          return `
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-sm font-medium text-gray-700">${typeLabel}</span>
+                <span class="text-sm font-bold text-indigo-600">${count}</span>
+              </div>
+              <div class="w-full bg-gray-200 rounded-full h-2">
+                <div class="bg-gradient-to-r from-indigo-400 to-purple-500 h-2 rounded-full" style="width: ${percent}%"></div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // Render recent actions
+      const recentDiv = document.getElementById('dashRecentActions');
+      const emptyDiv = document.getElementById('dashEmptyActions');
+      
+      const sortedDocs = [...documents]
+        .sort((a, b) => new Date(b.dar_date || b.updated_at) - new Date(a.dar_date || a.updated_at))
+        .slice(0, 5);
+
+      if (sortedDocs.length === 0) {
+        recentDiv.innerHTML = '';
+        emptyDiv.classList.remove('hidden');
+      } else {
+        emptyDiv.classList.add('hidden');
+        recentDiv.innerHTML = sortedDocs.map(doc => {
+          const actionType = doc.dar_type;
+          const actionEmoji = actionType === 'create' ? '🆕' : actionType === 'edit' ? '✏️' : actionType === 'cancel' ? '❌' : '📋';
+          const actionText = actionType === 'create' ? 'จัดทำใหม่' : actionType === 'edit' ? 'แก้ไข' : actionType === 'cancel' ? 'ยกเลิก' : 'อื่นๆ';
+          const dateStr = formatDate(doc.dar_date || doc.updated_at);
+          
+          return `
+            <div class="p-3 bg-gray-50 rounded-lg border-l-4 border-indigo-400 hover:bg-indigo-50 transition-colors">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="text-lg">${actionEmoji}</span>
+                  <div class="text-sm">
+                    <p class="font-medium text-gray-800">${escapeHtml(doc.doc_name)}</p>
+                    <p class="text-xs text-gray-500">${escapeHtml(doc.doc_code)}</p>
+                  </div>
+                </div>
+                <span class="text-xs text-gray-400">${dateStr}</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    function getMasterDocumentInfo(docCode) {
+      // Get the latest create record for this document
+      const createRecord = documents.find(d => d.doc_code === docCode && d.dar_type === 'create');
+      if (!createRecord) return null;
+
+      // Get the latest version from all actions (create, edit, cancel)
+      const allActions = documents.filter(d => d.doc_code === docCode);
+      const latestVersion = allActions.reduce((latest, doc) => {
+        const docVer = parseFloat(doc.version) || 0;
+        const latestVer = parseFloat(latest.version) || 0;
+        return docVer > latestVer ? doc : latest;
+      }, createRecord);
+
+      // Get current status from latest action
+      const latestAction = allActions.sort((a, b) => 
+        new Date(b.dar_date || b.updated_at) - new Date(a.dar_date || a.updated_at)
+      )[0];
+
+      let status = 'active';
+      if (latestAction.dar_type === 'cancel') {
+        status = 'cancelled';
+      } else if (latestAction.dar_type === 'create') {
+        status = 'active';
+      } else {
+        status = 'active';
+      }
+
+      return {
+        ...createRecord,
+        version: latestVersion.version,
+        status: status,
+        latest_action: latestAction
+      };
+    }
+
+    function renderMasterlist() {
+      const tbody = document.getElementById('masterlistBody');
+      const empty = document.getElementById('emptyMasterlist');
+      const search = document.getElementById('searchMaster').value.toLowerCase();
+      const statusFilter = document.getElementById('filterStatus').value;
+
+      // Get unique documents (grouped by doc_code)
+      const uniqueDocCodes = [...new Set(documents.filter(d => d.dar_type === 'create').map(d => d.doc_code))];
+      
+      let masterDocs = uniqueDocCodes.map(code => getMasterDocumentInfo(code)).filter(d => d);
+
+      let filtered = masterDocs.filter(doc => {
+        const matchSearch = doc.doc_code.toLowerCase().includes(search) || 
+                           doc.doc_name.toLowerCase().includes(search);
+        const matchStatus = !statusFilter || doc.status === statusFilter;
+        return matchSearch && matchStatus;
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+      }
+
+      empty.classList.add('hidden');
+      tbody.innerHTML = filtered.map(doc => {
+        return `
+        <tr class="hover:bg-indigo-50/50 transition-colors">
+          <td class="px-4 py-3 font-mono font-semibold text-indigo-600 cursor-pointer hover:text-indigo-800 underline" onclick="openDocumentDetail('${escapeHtml(doc.doc_code)}')">${escapeHtml(doc.doc_code)}</td>
+          <td class="px-4 py-3 font-medium text-gray-800 cursor-pointer hover:text-indigo-700 underline" onclick="openDocumentDetail('${escapeHtml(doc.doc_code)}')">${escapeHtml(doc.doc_name)}</td>
+          <td class="px-4 py-3 text-gray-600">${typeLabels[doc.doc_type] || doc.doc_type}</td>
+          <td class="px-4 py-3"><span class="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-semibold">Rev.${escapeHtml(doc.version)}</span></td>
+          <td class="px-4 py-3">${getStatusBadge(doc.status)}</td>
+          <td class="px-4 py-3 text-gray-500 text-sm">${formatDate(doc.updated_at)}</td>
+        </tr>
+      `}).join('');
+
+      // Populate edit dropdown - show only active documents
+      const activeCreateDocs = masterDocs.filter(d => d.status === 'active');
+      const editSelect = document.getElementById('editSelectDoc');
+      editSelect.innerHTML = '<option value="">-- เลือกเอกสารที่ต้องการแก้ไข --</option>' +
+        activeCreateDocs.map(d => {
+          const originalDoc = documents.find(x => x.doc_code === d.doc_code && x.dar_type === 'create');
+          return `<option value="${originalDoc.__backendId || originalDoc.id}">${escapeHtml(d.doc_code)} - ${escapeHtml(d.doc_name)}</option>`;
+        }).join('');
+
+      // Populate cancel dropdown - show only active documents
+      const cancelSelect = document.getElementById('cancelSelectDoc');
+      cancelSelect.innerHTML = '<option value="">-- เลือกเอกสารที่ต้องการยกเลิก --</option>' +
+        activeCreateDocs.map(d => {
+          const originalDoc = documents.find(x => x.doc_code === d.doc_code && x.dar_type === 'create');
+          return `<option value="${originalDoc.__backendId || originalDoc.id}">${escapeHtml(d.doc_code)} - ${escapeHtml(d.doc_name)}</option>`;
+        }).join('');
+    }
+
+    function openDocumentDetail(docCode) {
+      const masterDoc = getMasterDocumentInfo(docCode);
+      if (!masterDoc) return;
+
+      // Get all actions for this document
+      const allActions = documents.filter(d => d.doc_code === docCode)
+        .sort((a, b) => new Date(b.dar_date || b.updated_at) - new Date(a.dar_date || a.updated_at));
+
+      // Build modal HTML with clickable DAR numbers
+      const actionsHtml = allActions.map(action => {
+        const actionEmoji = action.dar_type === 'create' ? '🆕' : action.dar_type === 'edit' ? '✏️' : action.dar_type === 'cancel' ? '❌' : '📋';
+        const actionText = action.dar_type === 'create' ? 'ขอจัดทำเอกสารใหม่' : action.dar_type === 'edit' ? 'ขอแก้ไขเอกสาร' : action.dar_type === 'cancel' ? 'ขอยกเลิกเอกสาร' : 'อื่นๆ';
+        
+        return `
+          <div class="mb-4 pb-4 border-b border-gray-200 last:border-b-0">
+            <div class="flex items-start gap-3">
+              <div class="text-2xl mt-1">${actionEmoji}</div>
+              <div class="flex-1">
+                <div class="flex items-center justify-between mb-2">
+                  <h4 class="font-semibold text-gray-800">${actionText}</h4>
+                  <span class="text-xs text-gray-500">${formatDate(action.dar_date || action.updated_at)}</span>
+                </div>
+                <p class="text-sm text-gray-600 mb-2">DAR No: <span class="font-mono font-semibold text-indigo-600 cursor-pointer hover:text-indigo-800 hover:underline" onclick="openNestedDarDetail('${escapeHtml(action.dar_no)}')">${escapeHtml(action.dar_no)}</span></p>
+                <div class="bg-gray-50 rounded p-3 text-sm space-y-1">
+                  <p><span class="font-medium text-gray-700">เวอร์ชัน:</span> <span class="text-indigo-600 font-semibold">Rev.${escapeHtml(action.version)}</span></p>
+                  ${action.action_details ? `<p><span class="font-medium text-gray-700">รายละเอียด:</span> ${escapeHtml(action.action_details)}</p>` : ''}
+                  ${action.cancel_reason ? `<p><span class="font-medium text-gray-700">เหตุผล:</span> ${escapeHtml(action.cancel_reason)}</p>` : ''}
+                  ${action.requester_name ? `<p><span class="font-medium text-gray-700">ผู้ขอ:</span> ${escapeHtml(action.requester_name)} (${escapeHtml(action.requester_position || '-')})</p>` : ''}
+                  ${action.approver_name ? `<p><span class="font-medium text-gray-700">ผู้อนุมัติ:</span> ${escapeHtml(action.approver_name)} (${escapeHtml(action.approver_position || '-')})</p>` : ''}
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      const modalHtml = `
+        <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div class="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 animate-fade">
+            <div class="flex items-start justify-between mb-6">
+              <div>
+                <h2 class="text-2xl font-bold text-gray-800 mb-2">${escapeHtml(masterDoc.doc_name)}</h2>
+                <p class="text-sm text-gray-600">รหัส: <span class="font-mono font-semibold text-indigo-600">${escapeHtml(masterDoc.doc_code)}</span></p>
+              </div>
+              <button onclick="closeDocumentDetail()" class="text-gray-400 hover:text-gray-600 text-2xl">✕</button>
+            </div>
+
+            <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl p-4 mb-6">
+              <div class="grid md:grid-cols-2 gap-4">
+                <div>
+                  <p class="text-xs text-gray-600 font-semibold mb-1">ประเภทเอกสาร</p>
+                  <p class="text-sm font-semibold text-gray-800">${typeLabels[masterDoc.doc_type] || masterDoc.doc_type}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-600 font-semibold mb-1">เวอร์ชันปัจจุบัน</p>
+                  <p class="text-sm font-semibold text-indigo-600">Rev.${escapeHtml(masterDoc.version)}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-600 font-semibold mb-1">หน่วยงาน</p>
+                  <p class="text-sm font-semibold text-gray-800">${escapeHtml(masterDoc.department || '-')}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-600 font-semibold mb-1">สถานะ</p>
+                  <div>${getStatusBadge(masterDoc.status)}</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mb-6">
+              <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <span>📋</span> ประวัติการดำเนินการ
+              </h3>
+              <div class="space-y-2">
+                ${actionsHtml}
+              </div>
+            </div>
+
+            <div class="flex gap-3 mt-8 pt-6 border-t">
+              <button onclick="closeDocumentDetail()" class="flex-1 py-3 rounded-xl border-2 border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 transition-colors">ปิด</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Remove existing modal if any
+      const existingModal = document.getElementById('detailModal');
+      if (existingModal) existingModal.remove();
+
+      // Create and insert modal
+      const modal = document.createElement('div');
+      modal.id = 'detailModal';
+      modal.innerHTML = modalHtml;
+      document.body.appendChild(modal);
+    }
+
+    function closeDocumentDetail() {
+      const modal = document.getElementById('detailModal');
+      if (modal) modal.remove();
+    }
+
+    function openDarDetail(darNo) {
+      const darRecord = documents.find(d => d.dar_no === darNo);
+      if (!darRecord) return;
+
+      const actionsHtml = `
+        <div class="bg-gray-50 rounded p-4 text-sm space-y-2">
+          <p><span class="font-medium text-gray-700">DAR Type:</span> ${darRecord.dar_type === 'create' ? '🆕 ขอจัดทำเอกสารใหม่' : darRecord.dar_type === 'edit' ? '✏️ ขอแก้ไขเอกสาร' : darRecord.dar_type === 'cancel' ? '❌ ขอยกเลิกเอกสาร' : 'อื่นๆ'}</p>
+          <p><span class="font-medium text-gray-700">รหัสเอกสาร:</span> ${escapeHtml(darRecord.doc_code)}</p>
+          <p><span class="font-medium text-gray-700">ชื่อเอกสาร:</span> ${escapeHtml(darRecord.doc_name)}</p>
+          <p><span class="font-medium text-gray-700">ประเภท:</span> ${typeLabels[darRecord.doc_type] || darRecord.doc_type}</p>
+          <p><span class="font-medium text-gray-700">เวอร์ชัน:</span> Rev.${escapeHtml(darRecord.version)}</p>
+          <p><span class="font-medium text-gray-700">หน่วยงาน:</span> ${escapeHtml(darRecord.department || '-')}</p>
+          <p><span class="font-medium text-gray-700">วันที่:</span> ${formatDate(darRecord.dar_date || darRecord.updated_at)}</p>
+          ${darRecord.requester_name ? `<p><span class="font-medium text-gray-700">ผู้ขอ:</span> ${escapeHtml(darRecord.requester_name)} (${escapeHtml(darRecord.requester_position || '-')})</p>` : ''}
+          ${darRecord.approver_name ? `<p><span class="font-medium text-gray-700">ผู้อนุมัติ:</span> ${escapeHtml(darRecord.approver_name)} (${escapeHtml(darRecord.approver_position || '-')})</p>` : ''}
+          ${darRecord.doc_controller ? `<p><span class="font-medium text-gray-700">เจ้าหน้าที่ควบคุมเอกสาร:</span> ${escapeHtml(darRecord.doc_controller)}</p>` : ''}
+          ${darRecord.admin_representative ? `<p><span class="font-medium text-gray-700">ตัวแทนฝ่ายบริหาร:</span> ${escapeHtml(darRecord.admin_representative)}</p>` : ''}
+          ${darRecord.action_details ? `<p><span class="font-medium text-gray-700">รายละเอียด:</span> ${escapeHtml(darRecord.action_details)}</p>` : ''}
+          ${darRecord.cancel_reason ? `<p><span class="font-medium text-gray-700">เหตุผล:</span> ${escapeHtml(darRecord.cancel_reason)}</p>` : ''}
+        </div>
+      `;
+
+      const modalHtml = `
+        <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div class="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 animate-fade">
+            <div class="flex items-start justify-between mb-6">
+              <div>
+                <h2 class="text-2xl font-bold text-gray-800 mb-2">รายละเอียด DAR</h2>
+                <p class="text-lg font-mono font-bold text-rose-600">${escapeHtml(darRecord.dar_no)}</p>
+              </div>
+              <button onclick="closeNestedDarDetail()" class="text-gray-400 hover:text-gray-600 text-2xl">✕</button>
+            </div>
+
+            <div class="mb-6">
+              ${actionsHtml}
+            </div>
+
+            <div class="flex gap-3 mt-8 pt-6 border-t">
+              <button onclick="closeNestedDarDetail()" class="flex-1 py-3 rounded-xl border-2 border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 transition-colors">ปิด</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Remove existing modal if any
+      const existingModal = document.getElementById('nestedDarDetailModal');
+      if (existingModal) existingModal.remove();
+
+      // Create and insert modal
+      const modal = document.createElement('div');
+      modal.id = 'nestedDarDetailModal';
+      modal.innerHTML = modalHtml;
+      document.body.appendChild(modal);
+    }
+
+    function closeNestedDarDetail() {
+      const modal = document.getElementById('nestedDarDetailModal');
+      if (modal) modal.remove();
+    }
+
+    function openDarDetail(darNo) {
+      const darRecord = documents.find(d => d.dar_no === darNo);
+      if (!darRecord) return;
+
+      const actionsHtml = `
+        <div class="bg-gray-50 rounded p-4 text-sm space-y-2">
+          <p><span class="font-medium text-gray-700">DAR Type:</span> ${darRecord.dar_type === 'create' ? '🆕 ขอจัดทำเอกสารใหม่' : darRecord.dar_type === 'edit' ? '✏️ ขอแก้ไขเอกสาร' : darRecord.dar_type === 'cancel' ? '❌ ขอยกเลิกเอกสาร' : 'อื่นๆ'}</p>
+          <p><span class="font-medium text-gray-700">รหัสเอกสาร:</span> ${escapeHtml(darRecord.doc_code)}</p>
+          <p><span class="font-medium text-gray-700">ชื่อเอกสาร:</span> ${escapeHtml(darRecord.doc_name)}</p>
+          <p><span class="font-medium text-gray-700">ประเภท:</span> ${typeLabels[darRecord.doc_type] || darRecord.doc_type}</p>
+          <p><span class="font-medium text-gray-700">เวอร์ชัน:</span> Rev.${escapeHtml(darRecord.version)}</p>
+          <p><span class="font-medium text-gray-700">หน่วยงาน:</span> ${escapeHtml(darRecord.department || '-')}</p>
+          <p><span class="font-medium text-gray-700">วันที่:</span> ${formatDate(darRecord.dar_date || darRecord.updated_at)}</p>
+          ${darRecord.requester_name ? `<p><span class="font-medium text-gray-700">ผู้ขอ:</span> ${escapeHtml(darRecord.requester_name)} (${escapeHtml(darRecord.requester_position || '-')})</p>` : ''}
+          ${darRecord.approver_name ? `<p><span class="font-medium text-gray-700">ผู้อนุมัติ:</span> ${escapeHtml(darRecord.approver_name)} (${escapeHtml(darRecord.approver_position || '-')})</p>` : ''}
+          ${darRecord.doc_controller ? `<p><span class="font-medium text-gray-700">เจ้าหน้าที่ควบคุมเอกสาร:</span> ${escapeHtml(darRecord.doc_controller)}</p>` : ''}
+          ${darRecord.admin_representative ? `<p><span class="font-medium text-gray-700">ตัวแทนฝ่ายบริหาร:</span> ${escapeHtml(darRecord.admin_representative)}</p>` : ''}
+          ${darRecord.action_details ? `<p><span class="font-medium text-gray-700">รายละเอียด:</span> ${escapeHtml(darRecord.action_details)}</p>` : ''}
+          ${darRecord.cancel_reason ? `<p><span class="font-medium text-gray-700">เหตุผล:</span> ${escapeHtml(darRecord.cancel_reason)}</p>` : ''}
+        </div>
+      `;
+
+      const modalHtml = `
+        <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div class="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 animate-fade">
+            <div class="flex items-start justify-between mb-6">
+              <div>
+                <h2 class="text-2xl font-bold text-gray-800 mb-2">รายละเอียด DAR</h2>
+                <p class="text-lg font-mono font-bold text-rose-600">${escapeHtml(darRecord.dar_no)}</p>
+              </div>
+              <button onclick="closeDarDetail()" class="text-gray-400 hover:text-gray-600 text-2xl">✕</button>
+            </div>
+
+            <div class="mb-6">
+              ${actionsHtml}
+            </div>
+
+            <div class="flex gap-3 mt-8 pt-6 border-t">
+              <button onclick="closeDarDetail()" class="flex-1 py-3 rounded-xl border-2 border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 transition-colors">ปิด</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Remove existing modal if any
+      const existingModal = document.getElementById('darDetailModal');
+      if (existingModal) existingModal.remove();
+
+      // Create and insert modal
+      const modal = document.createElement('div');
+      modal.id = 'darDetailModal';
+      modal.innerHTML = modalHtml;
+      document.body.appendChild(modal);
+    }
+
+    function closeDarDetail() {
+      const modal = document.getElementById('darDetailModal');
+      if (modal) modal.remove();
+    }
+
+    function renderDarLog() {
+      const tbody = document.getElementById('darBody');
+      const empty = document.getElementById('emptyDar');
+
+      const sortedDocs = [...documents].sort((a, b) => 
+        new Date(b.dar_date || b.updated_at) - new Date(a.dar_date || a.updated_at)
+      );
+
+      if (sortedDocs.length === 0) {
+        tbody.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+      }
+
+      empty.classList.add('hidden');
+      tbody.innerHTML = sortedDocs.map(doc => {
+        const actionType = doc.dar_type;
+        const actionEmoji = actionType === 'create' ? '🆕' : actionType === 'edit' ? '✏️' : actionType === 'cancel' ? '❌' : '📋';
+        const actionText = actionType === 'create' ? 'ขอจัดทำเอกสารใหม่' : actionType === 'edit' ? 'ขอแก้ไขเอกสาร' : actionType === 'cancel' ? 'ขอยกเลิกเอกสาร' : 'อื่นๆ';
+        return `
+        <tr class="hover:bg-rose-50/50 transition-colors">
+          <td class="px-4 py-3 text-gray-600">${formatDate(doc.dar_date || doc.updated_at)}</td>
+          <td class="px-4 py-3 font-mono font-semibold text-rose-600 cursor-pointer hover:underline" onclick="openDarDetail('${escapeHtml(doc.dar_no)}')">${escapeHtml(doc.dar_no)}</td>
+          <td class="px-4 py-3 font-mono font-semibold text-rose-600">${escapeHtml(doc.doc_code)}</td>
+          <td class="px-4 py-3 font-medium text-gray-800">${escapeHtml(doc.doc_name)}</td>
+          <td class="px-4 py-3"><span class="px-3 py-1 bg-rose-100 text-rose-700 rounded-full text-sm font-semibold">Rev.${escapeHtml(doc.version)}</span></td>
+          <td class="px-4 py-3">${actionEmoji} ${actionText}</td>
+        </tr>
+      `}).join('');
+    }
+
+    function getStatusBadge(status) {
+      const badges = {
+        active: '<span class="px-3 py-1 status-active text-white rounded-full text-sm font-semibold">✓ ใช้งาน</span>',
+        draft: '<span class="px-3 py-1 status-draft text-white rounded-full text-sm font-semibold">📝 ร่าง</span>',
+        cancelled: '<span class="px-3 py-1 status-cancelled text-white rounded-full text-sm font-semibold">✗ ยกเลิก</span>'
+      };
+      return badges[status] || status;
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return '-';
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function filterMasterlist() {
+      renderMasterlist();
+    }
+
+    function showFolderDocs(folder) {
+      document.getElementById('searchMaster').value = '';
+      document.getElementById('filterStatus').value = '';
+      switchTab('masterlist');
+      
+      setTimeout(() => {
+        renderMasterlist();
+      }, 100);
+    }
+
+    function openEditModal(docId) {
+      // Not used - edit now done via dropdown selection
+    }
+
+    function closeEditModal() {
+      // Not used
+    }
+
+    function openCancelModal(docId) {
+      // Not used - cancel now done via dropdown selection
+    }
+
+    function closeCancelModal() {
+      // Not used
+    }
+
+    async function confirmCancel() {
+      // Not used
+    }
+
+    async function reactivateDoc(docId) {
+      // Not used
+    }
+
+    function showToast(msg, type = 'success') {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toastMsg');
+      toastMsg.textContent = msg;
+      
+      toast.className = toast.className.replace(/bg-\w+-500/g, '');
+      toast.classList.add(type === 'error' ? 'bg-red-500' : type === 'warning' ? 'bg-amber-500' : 'bg-green-500');
+      
+      toast.style.transform = 'translateY(0)';
+      toast.style.opacity = '1';
+      
+      setTimeout(() => {
+        toast.style.transform = 'translateY(20px)';
+        toast.style.opacity = '0';
+      }, 3000);
+    }
+
+    // Initialize app
+    initApp();
+
+    // Simplified sendToGAS without file uploads
+    async function sendToGAS(formData) {
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('🔍 [sendToGAS] Function called');
+      console.log('📍 CONFIG.GAS_URL:', CONFIG.GAS_URL);
+      console.log('📋 Form Data:', JSON.stringify(formData, null, 2));
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      
+      if (!CONFIG.GAS_URL || CONFIG.GAS_URL === '') {
+        console.warn('⚠️ [sendToGAS] GAS_URL not configured, skipping GAS sync');
+        return true;
+      }
+
+      try {
+        const payload = {
+          action: 'saveDAR',
+          data: formData,
+          adminEmail: CONFIG.ADMIN_EMAIL,
+          timestamp: new Date().toISOString()
+        };
+
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('📤 [sendToGAS] Sending payload to GAS');
+        console.log('🔗 Endpoint:', CONFIG.GAS_URL);
+        console.log('📋 Payload:', JSON.stringify(payload, null, 2));
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+        const response = await fetch(CONFIG.GAS_URL, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        console.log('📨 [sendToGAS] HTTP Response received');
+        console.log('   - Status:', response.status);
+        console.log('   - OK:', response.ok);
+        console.log('   - Status Text:', response.statusText);
+
+        let result;
+        try {
+          const responseText = await response.text();
+          console.log('📥 [sendToGAS] Raw response text:', responseText);
+          result = JSON.parse(responseText);
+        } catch (parseError) {
+          console.error('❌ [sendToGAS] JSON parse error:', parseError);
+          throw parseError;
+        }
+
+        console.log('✨ [sendToGAS] Parsed response:', JSON.stringify(result, null, 2));
+
+        if (result.success) {
+          console.log('✅ [sendToGAS] SUCCESS! Data saved to Sheet');
+          console.log('   - Message:', result.message);
+          console.log('   - Row count:', result.rowCount);
+          showToast('✅ ส่งข้อมูลไป Google Sheet สำเร็จ!');
+          return true;
+        } else {
+          console.log('❌ [sendToGAS] GAS returned error:', result.error);
+          throw new Error(result.error || 'Unknown error from GAS');
+        }
+        
+      } catch (error) {
+        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.error('❌ [sendToGAS] EXCEPTION CAUGHT');
+        console.error('   - Message:', error.message);
+        console.error('   - Name:', error.name);
+        console.error('   - Stack:', error.stack);
+        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        showToast('⚠️ ส่งไป Sheet จำกัด แต่บันทึกเรียบร้อย', 'warning');
+        return true;
+      }
+    }
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9dd30857330099a6',t:'MTc3MzY1NjUwMy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
